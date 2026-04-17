@@ -20,19 +20,38 @@ class WindowAsWallpaper:
         self.running = True
 
     def get_worker_w(self):
-        """Progmanにメッセージを送信してWorkerWを生成させ、そのハンドラを取得する"""
-        progman = win32gui.FindWindow("Progman", None)
-        # 0x052C は内部的なメッセージで、WorkerWを生成させる
-        win32gui.SendMessageTimeout(progman, 0x052C, 0, 0, win32con.SMTO_NORMAL, 1000)
+        """WorkerWの取得。Wallpaper Engineなどで既に生成されている場合はそれを検出し、なければ生成させる。"""
+        def find_worker():
+            target_hwnd = [None]
+            def enum_windows_callback(hwnd, _):
+                # SHELLDLL_DefView（デスクトップアイコン層）を持つWindowを探す
+                shell_view = win32gui.FindWindowEx(hwnd, 0, "SHELLDLL_DefView", None)
+                if shell_view:
+                    # その背後に隠れている兄弟ウィンドウ（WorkerW）を取得
+                    # target_hwnd[0] = win32gui.FindWindowEx(0, hwnd, "WorkerW", None)
+                    
+                    # SHELLDLL_DefViewの兄弟/背後にあるWorkerWを探す(Wallpaper Engine対応?)
+                    found = win32gui.FindWindowEx(0, hwnd, "WorkerW", None)
+                    if not found:
+                        found = win32gui.FindWindowEx(hwnd, 0, "WorkerW", None)
+                    if found:
+                        target_hwnd[0] = found
+                return True
+            win32gui.EnumWindows(enum_windows_callback, None)
+            return target_hwnd[0]
 
-        def enum_windows_callback(hwnd, _):
-            # SHELLDLL_DefViewを持つWindowの背後にあるWorkerWを探す
-            shell_view = win32gui.FindWindowEx(hwnd, 0, "SHELLDLL_DefView", None)
-            if shell_view:
-                # その次にある兄弟ウィンドウがターゲットのWorkerW
-                self.worker_w = win32gui.FindWindowEx(0, hwnd, "WorkerW", None)
+        # 1. まず既存のWorkerWを探索
+        self.worker_w = find_worker()
+        
+        if self.worker_w:
+            print(f"既存の WorkerW を検出しました: {hex(self.worker_w)}")
+        else:
+            # 2. 見つからない場合のみ Progman にメッセージを送信して生成を促す
+            print("WorkerW が見つからないため、新規生成をリクエストします...")
+            progman = win32gui.FindWindow("Progman", None)
+            win32gui.SendMessageTimeout(progman, 0x052C, 0, 0, win32con.SMTO_NORMAL, 1000)
+            self.worker_w = find_worker()
 
-        win32gui.EnumWindows(enum_windows_callback, None)
         return self.worker_w
 
     def setup_window_style(self, hwnd):
