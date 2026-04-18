@@ -19,6 +19,7 @@ class WindowAsWallpaper:
         self.worker_w = None
         self.icon = None
         self.running = True
+        self.console_hwnd = ctypes.windll.kernel32.GetConsoleWindow()
 
     def get_worker_w(self):
         """WorkerWの取得。Wallpaper Engineなどで既に生成されている場合はそれを検出し、なければ生成させる。"""
@@ -185,6 +186,10 @@ class WindowAsWallpaper:
 
     def stay_resident(self):
         """システムトレイアイコンを表示して待機する"""
+        # コンソールを非表示にする
+        if self.console_hwnd:
+            win32gui.ShowWindow(self.console_hwnd, win32con.SW_HIDE)
+
         menu = pystray.Menu(
             pystray.MenuItem("Exit", self._on_exit_clicked)
         )
@@ -198,6 +203,10 @@ class WindowAsWallpaper:
 
     def cleanup(self):
         """終了時に子プロセスを停止する"""
+        # コンソールを再表示する
+        if self.console_hwnd:
+            win32gui.ShowWindow(self.console_hwnd, win32con.SW_SHOW)
+
         print("終了処理中...")
         self.running = False
         if self.icon:
