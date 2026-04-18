@@ -11,6 +11,8 @@ import win32process
 import ctypes
 import pystray
 from PIL import Image, ImageDraw
+from rich.console import Console
+from rich.rule import Rule
 
 # デバッグ用のフラグを定義
 switchConsoleVisible_inResidentMode = True # True=常駐モード中にコンソールウィンドウが非表示に設定される
@@ -23,6 +25,7 @@ class WindowAsWallpaper:
         self.icon = None
         self.running = True
         self.console_hwnd = ctypes.windll.kernel32.GetConsoleWindow()
+        self.console = Console(highlight=False)
 
     def get_worker_w(self):
         """WorkerWの取得。Wallpaper Engineなどで既に生成されている場合はそれを検出し、なければ生成させる。"""
@@ -49,10 +52,10 @@ class WindowAsWallpaper:
         self.worker_w = find_worker()
         
         if self.worker_w:
-            print(f"既存の WorkerW を検出しました: {hex(self.worker_w)}")
+            self.console.print(f"[bold green]既存の WorkerW を検出しました:[/bold green] [white]{hex(self.worker_w)}[/white]")
         else:
             # 2. 見つからない場合のみ Progman にメッセージを送信して生成を促す
-            print("WorkerW が見つからないため、新規生成をリクエストします...")
+            self.console.print("[yellow]WorkerW が見つからないため、新規生成をリクエストします...[/yellow]")
             progman = win32gui.FindWindow("Progman", None)
             win32gui.SendMessageTimeout(progman, 0x052C, 0, 0, win32con.SMTO_NORMAL, 1000)
             self.worker_w = find_worker()
@@ -123,11 +126,13 @@ class WindowAsWallpaper:
         return None
 
     def run(self):
-        print("Win_WindowAsWallpaper (WAW) 起動中...")
+        self.console.print(Rule("[bold blue]Win_WindowAsWallpaper (WAW)[/bold blue]", style="blue", characters="="))
+        self.console.print("[dim]Windows Desktop Enhancement Tool[/dim]", justify="center")
+        self.console.print("")
         
         # 1. WorkerWの準備
         if not self.get_worker_w():
-            print("エラー: WorkerWの取得に失敗しました。")
+            self.console.print("[bold red]エラー:[/bold red] WorkerWの取得に失敗しました。")
             return
 
         # 2. 設定の読み込み
@@ -135,12 +140,13 @@ class WindowAsWallpaper:
             with open(self.config_path, 'r', encoding='utf-8') as f:
                 settings = json.load(f)
         except Exception as e:
-            print(f"エラー: 設定ファイルの読み込みに失敗しました。 {e}")
+            self.console.print(f"[bold red]エラー:[/bold red] 設定ファイルの読み込みに失敗しました。 [dim]{e}[/dim]")
             return
 
         # 3. 各アプリケーションの起動と配置
-        for item in settings:
-            print(f"起動中: {item['path']}")
+        for i, item in enumerate(settings):
+            exe_name = os.path.basename(item['path'])
+            self.console.print(f"🚀 [bold]({i+1}/{len(settings)}) 起動中:[/bold] [cyan]{exe_name}[/cyan] [dim]{item.get('args', '')}[/dim]")
             try:
                 proc = subprocess.Popen(item['path'] + " " + item.get('args', ''))
                 self.child_processes.append(proc)
@@ -156,7 +162,7 @@ class WindowAsWallpaper:
                     self.setup_window_style(hwnd)
                     # 位置設定
                     self.position_window(hwnd, item)
-                    print(f"配置完了: {hwnd}")
+                    self.console.print(f"   ∟ [bold green]配置完了:[/bold green] HWND:[white]{hwnd}[/white] | Monitor:{item['monitor']} | Grid:({item['x']},{item['y']}) Size:[white]{item['w']}x{item['h']}[/white]")
                     
                     # ウィンドウからフォーカスを外す（デスクトップにフォーカスを戻す）
                     shell_window = ctypes.windll.user32.GetShellWindow()
@@ -166,12 +172,14 @@ class WindowAsWallpaper:
                         except:
                             pass
                 else:
-                    print(f"警告: {item['path']} のウィンドウが見つかりませんでした。")
+                    self.console.print(f"   ∟ [bold yellow]警告:[/bold yellow] ウィンドウが見つかりませんでした。")
 
             except Exception as e:
-                print(f"エラー: {item['path']} の起動に失敗しました。 {e}")
+                self.console.print(f"   ∟ [bold red]エラー:[/bold red] 起動に失敗しました。 [dim]{e}[/dim]")
 
-        print("全てのプロセスが配置されました。常駐モードに移行します。")
+        self.console.print("\n[bold green]全てのプロセスが配置されました。[/bold green]")
+        self.console.print("[bold yellow]3秒後に常駐モードに移行します...[/bold yellow]")
+        time.sleep(3)
         self.stay_resident()
 
     def _create_element_icon(self):
@@ -210,7 +218,7 @@ class WindowAsWallpaper:
         if self.console_hwnd and switchConsoleVisible_inResidentMode:
             win32gui.ShowWindow(self.console_hwnd, win32con.SW_SHOW)
 
-        print("終了処理中...")
+        self.console.print("[bold red]終了処理中...[/bold red]")
         self.running = False
         if self.icon:
             self.icon.stop()
@@ -219,7 +227,8 @@ class WindowAsWallpaper:
                 proc.terminate()
             except:
                 pass
-        print("終了しました。")
+        self.console.print("[bold green]終了しました。3秒後に閉じます。[/bold green]")
+        time.sleep(3)
 
 if __name__ == "__main__":
     # 簡易的な設定ファイルのデフォルトパス
@@ -241,7 +250,7 @@ if __name__ == "__main__":
         ]
         with open(config_file, 'w', encoding='utf-8') as f:
             json.dump(sample_config, f, indent=4)
-        print(f"サンプル設定ファイルを作成しました: {config_file}")
+        Console(highlight=False).print(f"[bold green]サンプル設定ファイルを作成しました:[/bold green] {config_file}")
 
     waw = WindowAsWallpaper(config_file)
     
