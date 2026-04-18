@@ -19,9 +19,9 @@
 
 ### 1. Python と uv.exe の準備
 
-1. Python 3.13.13 Embeddable Package (64bit) をダウンロードし、Zipファイルを解凍したフォルダをプロジェクト直下に配置します。
+1. Python 3.13.13 Embeddable Package (64bit) をダウンロードし、Zipファイルを解凍したフォルダをプロジェクト直下に配置します。<br>
    https://www.python.org/downloads/latest/python3.13/
-2. uvのリポジトリから最新のリリースをダウンロードし、`uv.exe`をプロジェクト直下に配置します。
+2. uvのリポジトリから最新のリリースをダウンロードし、`uv.exe`をプロジェクト直下に配置します。<br>
    https://github.com/astral-sh/uv/releases/latest/
 
 ### 2. 環境の初期化とライブラリのインストール
