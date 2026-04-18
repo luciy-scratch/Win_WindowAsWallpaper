@@ -13,7 +13,7 @@ import pystray
 from PIL import Image, ImageDraw
 
 # デバッグ用のフラグを定義
-switchConsoleVisible_inResidentMode = False # True=常駐モード中にコンソールウィンドウが非表示に設定される
+switchConsoleVisible_inResidentMode = True # True=常駐モード中にコンソールウィンドウが非表示に設定される
 
 class WindowAsWallpaper:
     def __init__(self, config_path):
