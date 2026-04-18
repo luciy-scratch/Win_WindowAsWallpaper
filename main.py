@@ -200,7 +200,6 @@ class WindowAsWallpaper:
             except:
                 pass
         print("終了しました。")
-        sys.exit(0)
 
 if __name__ == "__main__":
     # 簡易的な設定ファイルのデフォルトパス
