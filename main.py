@@ -83,7 +83,7 @@ class WindowAsWallpaper:
 
         monitor_info = win32api.GetMonitorInfo(monitors[config['monitor']][0])
         # 1の場合はWorkArea(タスクバー除外)、0の場合はMonitorRect(全体)
-        use_rect = monitor_info['rcWork'] if config.get('taskbar', 1) == 1 else monitor_info['rcMonitor']
+        use_rect = monitor_info['Work'] if config.get('taskbar', 1) == 1 else monitor_info['Monitor']
         
         m_left, m_top, m_right, m_bottom = use_rect
         m_width = m_right - m_left
